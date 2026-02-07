@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find the Match!</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffe6e6;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h1 {
+            color: #d32f2f;
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            padding: 10px;
+        }
+
+        .card {
+            background-color: #ff4081;
+            height: 80px;
+            width: 80px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            transition: transform 0.4s;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card.flipped {
+            background-color: #fff;
+            transform: rotateY(180deg);
+            cursor: default;
+        }
+
+        .card-content {
+            display: none;
+        }
+
+        .card.flipped .card-content {
+            display: block;
+            transform: rotateY(180deg); /* Fix text mirroring */
+        }
+
+        /* The hidden popup */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            animation: popIn 0.5s ease;
+        }
+
+        h2 {
+            color: #d32f2f;
+            font-size: 2rem;
+        }
+
+        .btn {
+            background-color: #ff4081;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Find the Matches! ❤️</h1>
+
+    <div class="game-board" id="board">
+        </div>
+
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <h2>We're a perfect match!</h2>
+            <p style="font-size: 1.2rem; margin: 15px 0;">Will you be my Valentine?</p>
+            <button class="btn" onclick="alert('Yay! ❤️ I love you!')">YES!</button>
+        </div>
+    </div>
+
+    <script>
+        // You can change these emojis to things she likes!
+        const emojis = ['🍕', '🍕', '🌹', '🌹', '🐶', '🐶', '🍫', '🍫', '🧸', '🧸', '🍟', '🍟'];
+        
+        let openCards = [];
+        let matchedPairs = 0;
+        const totalPairs = emojis.length / 2;
+
+        // Shuffle function
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Create Board
+        const board = document.getElementById('board');
+        const shuffledEmojis = shuffle(emojis);
+
+        shuffledEmojis.forEach(emoji => {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.innerHTML = `<span class="card-content">${emoji}</span>`;
+            
+            card.addEventListener('click', () => flipCard(card, emoji));
+            board.appendChild(card);
+        });
+
+        function flipCard(card, emoji) {
+            // Prevent clicking if already flipped or 2 cards are already open
+            if (card.classList.contains('flipped') || openCards.length >= 2) return;
+
+            card.classList.add('flipped');
+            openCards.push({ card, emoji });
+
+            if (openCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [first, second] = openCards;
+
+            if (first.emoji === second.emoji) {
+                // Match found!
+                matchedPairs++;
+                openCards = [];
+                
+                // Check for Win
+                if (matchedPairs === totalPairs) {
+                    setTimeout(() => {
+                        document.getElementById('winModal').style.display = 'flex';
+                    }, 500);
+                }
+            } else {
+                // No match - flip back after delay
+                setTimeout(() => {
+                    first.card.classList.remove('flipped');
+                    second.card.classList.remove('flipped');
+                    openCards = [];
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
