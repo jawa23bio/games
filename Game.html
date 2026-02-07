@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch My Heart!</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #ffeff5;
+            font-family: 'Arial', sans-serif;
+            touch-action: none; /* Prevents scrolling on mobile */
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: linear-gradient(to bottom, #ffeff5, #ffc1e3);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #d81b60;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        /* The Surprise Popup */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 80%;
+            box-shadow: 0 0 20px rgba(255, 64, 129, 0.5);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        h1 {
+            color: #d81b60;
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #555;
+            margin: 20px 0;
+        }
+
+        button {
+            background-color: #ff4081;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            background-color: #f50057;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">Score: <span id="score">0</span> / 10</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="modal">
+        <div class="modal-content">
+            <h1>You Caught My Heart! 💖</h1>
+            <p>I think I've fallen for you...</p>
+            <p style="font-weight: bold; font-size: 1.5rem;">Will you be my Valentine?</p>
+            <button onclick="acceptValentine()">YES! 😻</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const modal = document.getElementById('modal');
+
+        // Set canvas size
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Game Variables
+        let score = 0;
+        let gameRunning = true;
+        const targetScore = 10;
+        
+        // Player (The Basket)
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 80,
+            height: 80,
+            emoji: '🧺' // You can change this to 🐶, 🐱, or 🛒
+        };
+
+        // Falling Hearts
+        let hearts = [];
+        const heartEmojis = ['❤️', '💖', '💝', '💕', '💗'];
+
+        // Input Handling
+        let touchX = canvas.width / 2;
+
+        window.addEventListener('mousemove', (e) => {
+            touchX = e.clientX;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            touchX = e.touches[0].clientX;
+        });
+
+        function spawnHeart() {
+            if (!gameRunning) return;
+            const size = 40 + Math.random() * 20;
+            hearts.push({
+                x: Math.random() * canvas.width,
+                y: -50,
+                size: size,
+                speed: 3 + Math.random() * 3,
+                emoji: heartEmojis[Math.floor(Math.random() * heartEmojis.length)]
+            });
+        }
+
+        // Spawn a heart every 0.8 seconds
+        setInterval(spawnHeart, 800);
+
+        function update() {
+            if (!gameRunning) return;
+
+            // Move Player
+            // Smoothly move player towards touch/mouse position
+            player.x += (touchX - player.x) * 0.1;
+            
+            // Keep player in bounds
+            if (player.x < 40) player.x = 40;
+            if (player.x > canvas.width - 40) player.x = canvas.width - 40;
+
+            // Update Hearts
+            for (let i = 0; i < hearts.length; i++) {
+                let h = hearts[i];
+                h.y += h.speed;
+
+                // Collision Detection
+                // Simple distance check
+                const dx = player.x - h.x;
+                const dy = player.y - h.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+
+                if (distance < (player.width/2 + h.size/2)) {
+                    // Caught!
+                    score++;
+                    scoreEl.textContent = score;
+                    hearts.splice(i, 1);
+                    i--;
+                    
+                    // Win Condition
+                    if (score >= targetScore) {
+                        endGame();
+                    }
+                } else if (h.y > canvas.height) {
+                    // Missed
+                    hearts.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function draw() {
+            // Clear screen
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Player
+            ctx.font = `${player.width}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(player.emoji, player.x, player.y);
+
+            // Draw Hearts
+            for (let h of hearts) {
+                ctx.font = `${h.size}px Arial`;
+                ctx.fillText(h.emoji, h.x, h.y);
+            }
+
+            if (gameRunning) {
+                requestAnimationFrame(loop);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            modal.style.display = 'flex';
+            // Simple confetti effect (optional background color change)
+            document.body.style.backgroundColor = "#ff4081"; 
+        }
+
+        function acceptValentine() {
+            alert("Yay! Can't wait! ❤️");
+        }
+
+        // Start loop
+        loop();
+
+    </script>
+</body>
+</html>
