@@ -2,70 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catch the Package</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Asteroid Dodger: Hard Mode</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #121212;
+            background-color: #050509;
             color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden; /* Prevents scrollbars when target moves */
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
 
         #header {
             text-align: center;
-            padding: 20px;
-            background-color: #1f1f1f;
+            padding: 10px;
+            background-color: #0a0a12;
             width: 100%;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             z-index: 10;
+            border-bottom: 2px solid #333;
+            box-sizing: border-box;
         }
 
-        h1 { margin: 0 0 10px 0; font-size: 1.5rem; color: #ff9800; }
-        p { margin: 0; color: #aaaaaa; }
+        h1 { margin: 0; font-size: 1.2rem; color: #ff4444; text-transform: uppercase; letter-spacing: 2px; }
+        p { margin: 5px 0 0; color: #aaaaaa; font-size: 0.9rem; }
 
-        #score-board {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #4caf50;
+        #game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 400px;
             margin-top: 10px;
+            font-weight: bold;
         }
 
-        /* The Game Area */
-        #game-area {
+        #timer-display { color: #4caf50; }
+        #status-display { color: #ff9800; }
+
+        #game-container {
             position: relative;
             width: 100vw;
-            height: calc(100vh - 120px);
+            height: calc(100vh - 90px);
+            background: radial-gradient(circle at center, #11111d 0%, #050509 100%);
+            overflow: hidden;
+            cursor: none;
         }
 
-        /* The Moving Target */
-        #target {
+        .star {
             position: absolute;
-            font-size: 3rem; /* Size of the emoji */
-            cursor: pointer;
-            user-select: none;
-            transition: top 0.2s, left 0.2s; /* Smooth jumping */
+            background-color: #fff;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: moveStars linear infinite;
+        }
+
+        @keyframes moveStars {
+            from { transform: translateY(-100vh); }
+            to { transform: translateY(100vh); }
+        }
+
+        #player {
+            position: absolute;
+            font-size: 2rem;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 60px;
-            height: 60px;
+            width: 32px;
+            height: 32px;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            transition: transform 0.05s ease-out;
         }
 
-        /* The Reward Screen (Hidden by default) */
-        #reward-screen {
+        .asteroid {
+            position: absolute;
+            font-size: 2rem;
+            z-index: 4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 32px;
+            height: 32px;
+            transform: translate(-50%, -50%);
+        }
+
+        #reward-screen, #game-over-screen {
             display: none;
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(18, 18, 18, 0.95);
+            background-color: rgba(5, 5, 9, 0.95);
             z-index: 20;
             flex-direction: column;
             justify-content: center;
@@ -73,119 +108,337 @@
             text-align: center;
             padding: 20px;
             box-sizing: border-box;
+            overflow-y: auto;
         }
 
         .reward-title {
-            font-size: 2rem;
-            color: #ff9800;
-            margin-bottom: 20px;
+            font-size: 1.8rem;
+            color: #4caf50;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+        
+        .reward-subtitle {
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 1rem;
         }
 
         .option-btn {
-            background-color: #2c2c2c;
+            background-color: #1a1a2e;
             color: #ffffff;
-            border: 2px solid #ff9800;
+            border: 2px solid #4caf50;
             padding: 15px 20px;
-            margin: 10px 0;
-            width: 80%;
-            max-width: 300px;
-            font-size: 1.1rem;
-            border-radius: 8px;
+            margin: 8px 0;
+            width: 85%;
+            max-width: 320px;
+            font-size: 1rem;
+            border-radius: 4px;
             cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             transition: 0.2s;
         }
 
-        .option-btn:hover { background-color: #ff9800; color: #121212; }
+        .option-btn:hover { background-color: #4caf50; color: #050509; }
 
         #final-message {
             display: none;
-            font-size: 1.5rem;
-            color: #4caf50;
-            margin-top: 30px;
+            font-size: 1.1rem;
+            color: #ff9800;
+            margin-top: 20px;
+            border: 1px solid #ff9800;
+            padding: 15px;
+            border-radius: 4px;
+            max-width: 90%;
         }
+
+        .poem-text {
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        #game-over-screen h2 { font-size: 2.5rem; color: #ff4444; margin: 0 0 20px; }
+        #restart-btn {
+            background-color: #ff4444;
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
     </style>
 </head>
 <body>
 
     <div id="header">
-        <h1>US ➡️ India Delivery</h1>
-        <p>Tap the flying package 10 times to secure your drop!</p>
-        <div id="score-board">Score: <span id="score">0</span> / 10</div>
+        <h1>SURVIVE THE GAUNTLET</h1>
+        <p>Avoid the ☄️ for 30 seconds to unlock your supply drop.</p>
+        <div id="game-info">
+            <div id="timer-display">TIME: <span id="time">30</span>s</div>
+            <div id="status-display">STATUS: ACTIVE</div>
+        </div>
     </div>
 
-    <div id="game-area">
-        <div id="target" onclick="catchPackage()">📦</div>
-    </div>
-
-    <div id="reward-screen">
-        <div class="reward-title">DELIVERY SECURED!</div>
-        <p style="margin-bottom: 30px;">Great reflexes. Now, choose your prize from the US:</p>
+    <div id="game-container">
+        <div id="player">🚀</div>
         
-        <button class="option-btn" onclick="claimPrize('Tanglish Letter/Poem')">1. Tanglish Letter/Poem</button>
-        <button class="option-btn" onclick="claimPrize('Music Track / Playlist')">2. Music / Spotify Vibe</button>
-        <button class="option-btn" onclick="claimPrize('Physical Item from the US')">3. Physical US Item</button>
-        <button class="option-btn" onclick="claimPrize('Zomato Feast')">4. Zomato Midnight Feast</button>
+        <div id="reward-screen">
+            <div class="reward-title">MISSION ACCOMPLISHED</div>
+            <p class="reward-subtitle">Gauntlet survived. Select your US reward:</p>
+            
+            <button class="option-btn" onclick="claimPrize(1)">1. Tanglish Letter/Poem</button>
+            <button class="option-btn" onclick="claimPrize(2)">2. US/India Music Vibe</button>
+            <button class="option-btn" onclick="claimPrize(3)">3. Physical US Item</button>
 
-        <div id="final-message"></div>
+            <div id="final-message"></div>
+        </div>
+        
+        <div id="game-over-screen">
+            <h2>SYSTEM FAILURE</h2>
+            <p>Collision detected. Mission aborted.</p>
+            <button id="restart-btn" onclick="restartGame()">RETRY MISSION</button>
+        </div>
     </div>
 
     <script>
-        let score = 0;
-        const target = document.getElementById('target');
-        const scoreDisplay = document.getElementById('score');
-        const gameArea = document.getElementById('game-area');
+        const TOTAL_TIME = 30; 
+        const ASTEROID_SPAWN_RATE = 100; 
+        const ASTEROID_SPEED_MIN = 4; 
+        const ASTEROID_SPEED_MAX = 8; 
+        const PLAYER_HITBOX_RADIUS = 8; 
+        const ASTEROID_HITBOX_RADIUS = 12; 
+        const STAR_COUNT = 50; 
+
+        let gameActive = false;
+        let timeLeft = TOTAL_TIME;
+        let playerX = window.innerWidth / 2;
+        let playerY = window.innerHeight * 0.8; 
+        let asteroids = [];
+        let gameInterval;
+        let timerInterval;
+        let spawnInterval;
+        let gameContainerRect;
+
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const timeDisplay = document.getElementById('time');
+        const statusDisplay = document.getElementById('status-display');
         const rewardScreen = document.getElementById('reward-screen');
-        let moveInterval;
+        const gameOverScreen = document.getElementById('game-over-screen');
 
-        // Function to move the target to a random position
-        function moveTarget() {
-            // Get dimensions, subtracting the target size so it doesn't go off screen
-            const maxX = gameArea.clientWidth - 60; 
-            const maxY = gameArea.clientHeight - 60;
-
-            const randomX = Math.floor(Math.random() * maxX);
-            const randomY = Math.floor(Math.random() * maxY);
-
-            target.style.left = randomX + 'px';
-            target.style.top = randomY + 'px';
+        function init() {
+            createStarfield();
+            updatePlayerPosition();
+            gameContainerRect = gameContainer.getBoundingClientRect();
+            
+            gameContainer.addEventListener('mousemove', handleMouseMove);
+            gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+            
+            startGame();
         }
 
-        // Move the target every 800 milliseconds
         function startGame() {
-            moveTarget(); // Initial move
-            moveInterval = setInterval(moveTarget, 800);
+            gameActive = true;
+            timeLeft = TOTAL_TIME;
+            timeDisplay.innerText = timeLeft;
+            statusDisplay.innerText = "ACTIVE";
+            statusDisplay.style.color = "#ff9800";
+            asteroids = [];
+            
+            const existingAsteroids = document.querySelectorAll('.asteroid');
+            existingAsteroids.forEach(a => a.remove());
+
+            rewardScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            player.style.display = 'flex';
+
+            gameInterval = requestAnimationFrame(gameLoop);
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame(true);
+                }
+            }, 1000);
+
+            spawnInterval = setInterval(spawnAsteroid, ASTEROID_SPAWN_RATE);
         }
 
-        // When the package is clicked
-        function catchPackage() {
-            score++;
-            scoreDisplay.innerText = score;
+        function gameLoop() {
+            if (!gameActive) return;
+            moveAsteroids();
+            checkCollisions();
+            gameInterval = requestAnimationFrame(gameLoop);
+        }
 
-            if (score >= 10) {
-                // Win condition met
-                clearInterval(moveInterval);
-                target.style.display = 'none'; // Hide the package
-                rewardScreen.style.display = 'flex'; // Show rewards
+        function endGame(win) {
+            gameActive = false;
+            clearInterval(timerInterval);
+            clearInterval(spawnInterval);
+            cancelAnimationFrame(gameInterval);
+            player.style.display = 'none';
+
+            if (win) {
+                rewardScreen.style.display = 'flex';
+                statusDisplay.innerText = "COMPLETED";
+                statusDisplay.style.color = "#4caf50";
             } else {
-                // Immediately jump to a new spot when clicked to make it harder
-                moveTarget(); 
+                gameOverScreen.style.display = 'flex';
+                statusDisplay.innerText = "FAILED";
+                statusDisplay.style.color = "#ff4444";
             }
         }
 
-        // When a prize is clicked
-        function claimPrize(prizeName) {
-            // Hide the buttons
-            const buttons = document.querySelectorAll('.option-btn');
-            buttons.forEach(btn => btn.style.display = 'none');
-            
-            // Show the final instruction
-            const finalMsg = document.getElementById('final-message');
-            finalMsg.style.display = 'block';
-            finalMsg.innerHTML = `You chose:<br><strong>${prizeName}</strong><br><br><span style="font-size: 1rem; color: #aaa;">Screenshot this and send it to me!</span>`;
+        function restartGame() {
+            playerX = window.innerWidth / 2;
+            playerY = window.innerHeight * 0.8;
+            updatePlayerPosition();
+            startGame();
         }
 
-        // Start the jumping logic
-        startGame();
+        function handleMouseMove(e) {
+            if (!gameActive) return;
+            playerX = Math.max(16, Math.min(e.clientX, window.innerWidth - 16));
+            playerY = Math.max(gameContainerRect.top + 16, Math.min(e.clientY, gameContainerRect.bottom - 16));
+            updatePlayerPosition();
+        }
+
+        function handleTouchMove(e) {
+            if (!gameActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            playerX = Math.max(16, Math.min(touch.clientX, window.innerWidth - 16));
+            playerY = Math.max(gameContainerRect.top + 16, Math.min(touch.clientY, gameContainerRect.bottom - 16));
+            updatePlayerPosition();
+        }
+
+        function updatePlayerPosition() {
+            const relativeY = playerY - gameContainerRect.top;
+            player.style.left = playerX + 'px';
+            player.style.top = relativeY + 'px';
+        }
+
+        function spawnAsteroid() {
+            if (!gameActive) return;
+            const asteroidEl = document.createElement('div');
+            asteroidEl.className = 'asteroid';
+            
+            const visualType = Math.random();
+            if (visualType < 0.2) { asteroidEl.innerText = '☄️'; }
+            else if (visualType < 0.4) { asteroidEl.innerText = '🪨'; }
+            else { asteroidEl.innerText = '🌕'; }
+
+            const startX = Math.random() * (window.innerWidth - 32) + 16;
+            const startY = -32;
+
+            asteroidEl.style.left = startX + 'px';
+            asteroidEl.style.top = startY + 'px';
+            gameContainer.appendChild(asteroidEl);
+
+            const asteroidObj = {
+                element: asteroidEl,
+                x: startX,
+                y: startY,
+                speed: ASTEROID_SPEED_MIN + Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN),
+                angle: (Math.random() - 0.5) * 0.5
+            };
+            asteroids.push(asteroidObj);
+        }
+
+        function moveAsteroids() {
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+                asteroid.y += asteroid.speed;
+                asteroid.x += asteroid.angle * asteroid.speed;
+                asteroid.element.style.top = asteroid.y + 'px';
+                asteroid.element.style.left = asteroid.x + 'px';
+
+                if (asteroid.y > gameContainerRect.height + 32) {
+                    asteroid.element.remove();
+                    asteroids.splice(i, 1);
+                }
+            }
+        }
+
+        function checkCollisions() {
+            const containerRelativePlayerY = playerY - gameContainerRect.top;
+            for (const asteroid of asteroids) {
+                const dx = playerX - asteroid.x;
+                const dy = containerRelativePlayerY - asteroid.y;
+                const distanceSq = dx * dx + dy * dy;
+                const hitRadiusSumSq = Math.pow(PLAYER_HITBOX_RADIUS + ASTEROID_HITBOX_RADIUS, 2);
+
+                if (distanceSq < hitRadiusSumSq) {
+                    endGame(false);
+                    break;
+                }
+            }
+        }
+
+        function createStarfield() {
+            for (let i = 0; i < STAR_COUNT; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + 'vw';
+                star.style.top = Math.random() * 100 + 'vh';
+                const duration = Math.random() * 40 + 20;
+                star.style.animationDuration = duration + 's';
+                star.style.animationDelay = '-' + (Math.random() * duration) + 's';
+                document.body.appendChild(star);
+            }
+        }
+
+        function claimPrize(optionNumber) {
+            const buttons = rewardScreen.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.style.display = 'none');
+            rewardScreen.querySelector('.reward-subtitle').style.display = 'none';
+            
+            const finalMsg = document.getElementById('final-message');
+            finalMsg.style.display = 'block';
+
+            if (optionNumber === 1) {
+                finalMsg.innerHTML = `
+                    <div class="poem-text">
+                        Dei Balu, you beat the game! US-lerunthu I'm sending love back,<br>
+                        Your big bro is impressed you survived the space attack.<br><br>
+                        House-kulla we invented games, tearing up the hall-u,<br>
+                        My go-to partner in crime, ready for every call-u.<br>
+                        You walk around like Thalaivar, full Rajini style-u,<br>
+                        But to me you're still my thambi with that same old smile-u.<br><br>
+                        IPL season-la you're covered in CSK yellow,<br>
+                        "Whistle Podu" nu kathum my favorite little fellow.<br>
+                        Dollar rate-a paathu don't ask for a costly treat-u,<br>
+                        But I'm counting down the days until we finally meet-u.
+                    </div>
+                    <span style="font-size: 0.9rem; color: #aaa;">Screenshot this and send it to me on WhatsApp!</span>
+                `;
+            } else if (optionNumber === 2) {
+                finalMsg.innerHTML = `CODE: <span style="color:#fff;">GAUNTLET_PASSED</span><br>CHOICE: <strong>US/India Music Vibe</strong><br><br><span style="font-size: 0.9rem; color: #aaa;">Screenshot this log and transmit via WhatsApp to claim!</span>`;
+            } else if (optionNumber === 3) {
+                finalMsg.innerHTML = `CODE: <span style="color:#fff;">GAUNTLET_PASSED</span><br>CHOICE: <strong>Physical US Item</strong><br><br><span style="font-size: 0.9rem; color: #aaa;">Screenshot this log and transmit via WhatsApp to claim!</span>`;
+            }
+        }
+
+        window.addEventListener('load', init);
+        window.addEventListener('resize', () => {
+            gameContainerRect = gameContainer.getBoundingClientRect();
+        });
     </script>
 </body>
 </html>
+
