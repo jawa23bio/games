@@ -78,6 +78,7 @@
             height: 32px;
             transform: translate(-50%, -50%);
             z-index: 5;
+            pointer-events: none; /* Prevents the rocket from blocking your finger */
         }
 
         .asteroid {
@@ -221,14 +222,13 @@
 
         let gameActive = false;
         let timeLeft = TOTAL_TIME;
-        let playerX = window.innerWidth / 2;
-        let playerY = window.innerHeight * 0.8; 
+        let playerX = 0;
+        let playerY = 0; 
         let asteroids = [];
         let gameInterval;
         let timerInterval;
         let spawnInterval;
-        let gameContainerRect;
-
+        
         const player = document.getElementById('player');
         const gameContainer = document.getElementById('game-container');
         const timeDisplay = document.getElementById('time');
@@ -238,18 +238,64 @@
 
         function init() {
             createStarfield();
-            updatePlayerPosition();
-            gameContainerRect = gameContainer.getBoundingClientRect();
-            
-            // Added mouse down and touch start for instant snapping!
-            gameContainer.addEventListener('mousedown', handleMouseMove);
-            gameContainer.addEventListener('mousemove', handleMouseMove);
-            
-            gameContainer.addEventListener('touchstart', handleTouchMove, { passive: false });
-            gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-            
+            setInitialPlayerPosition();
             startGame();
         }
+
+        function setInitialPlayerPosition() {
+            const rect = gameContainer.getBoundingClientRect();
+            // Start exactly in the bottom-center of the local game box
+            playerX = rect.width / 2;
+            playerY = rect.height * 0.8;
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+        }
+
+        // --- BULLETPROOF INPUT HANDLING ---
+        function handleInput(clientX, clientY) {
+            if (!gameActive) return;
+            const rect = gameContainer.getBoundingClientRect();
+            
+            // Constrain finger position to the boundaries of the game screen
+            let boundedX = Math.max(rect.left + 16, Math.min(clientX, rect.right - 16));
+            let boundedY = Math.max(rect.top + 16, Math.min(clientY, rect.bottom - 16));
+            
+            // Convert viewport coordinates strictly to internal container coordinates
+            playerX = boundedX - rect.left;
+            playerY = boundedY - rect.top;
+            
+            player.style.left = playerX + 'px';
+            player.style.top = playerY + 'px';
+        }
+
+        // Attach touch events globally so your finger is never lost
+        document.addEventListener('touchstart', function(e) {
+            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            e.preventDefault();
+            handleInput(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            e.preventDefault();
+            handleInput(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        // Add mouse support for testing on your desktop/laptop
+        document.addEventListener('mousedown', function(e) {
+            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            handleInput(e.clientX, e.clientY);
+            
+            function onMouseMove(moveEvent) {
+                handleInput(moveEvent.clientX, moveEvent.clientY);
+            }
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            });
+        });
+        // ----------------------------------
 
         function startGame() {
             gameActive = true;
@@ -305,32 +351,8 @@
         }
 
         function restartGame() {
-            playerX = window.innerWidth / 2;
-            playerY = window.innerHeight * 0.8;
-            updatePlayerPosition();
+            setInitialPlayerPosition();
             startGame();
-        }
-
-        function handleMouseMove(e) {
-            if (!gameActive) return;
-            playerX = Math.max(16, Math.min(e.clientX, window.innerWidth - 16));
-            playerY = Math.max(gameContainerRect.top + 16, Math.min(e.clientY, gameContainerRect.bottom - 16));
-            updatePlayerPosition();
-        }
-
-        function handleTouchMove(e) {
-            if (!gameActive) return;
-            e.preventDefault(); // prevents page scrolling
-            const touch = e.touches[0];
-            playerX = Math.max(16, Math.min(touch.clientX, window.innerWidth - 16));
-            playerY = Math.max(gameContainerRect.top + 16, Math.min(touch.clientY, gameContainerRect.bottom - 16));
-            updatePlayerPosition();
-        }
-
-        function updatePlayerPosition() {
-            const relativeY = playerY - gameContainerRect.top;
-            player.style.left = playerX + 'px';
-            player.style.top = relativeY + 'px';
         }
 
         function spawnAsteroid() {
@@ -343,7 +365,8 @@
             else if (visualType < 0.4) { asteroidEl.innerText = '🪨'; }
             else { asteroidEl.innerText = '🌕'; }
 
-            const startX = Math.random() * (window.innerWidth - 32) + 16;
+            const rect = gameContainer.getBoundingClientRect();
+            const startX = Math.random() * (rect.width - 32) + 16;
             const startY = -32;
 
             asteroidEl.style.left = startX + 'px';
@@ -361,6 +384,7 @@
         }
 
         function moveAsteroids() {
+            const rect = gameContainer.getBoundingClientRect();
             for (let i = asteroids.length - 1; i >= 0; i--) {
                 const asteroid = asteroids[i];
                 asteroid.y += asteroid.speed;
@@ -368,7 +392,7 @@
                 asteroid.element.style.top = asteroid.y + 'px';
                 asteroid.element.style.left = asteroid.x + 'px';
 
-                if (asteroid.y > gameContainerRect.height + 32) {
+                if (asteroid.y > rect.height + 32) {
                     asteroid.element.remove();
                     asteroids.splice(i, 1);
                 }
@@ -376,10 +400,10 @@
         }
 
         function checkCollisions() {
-            const containerRelativePlayerY = playerY - gameContainerRect.top;
             for (const asteroid of asteroids) {
+                // Both player and asteroid are now strictly using internal coordinates
                 const dx = playerX - asteroid.x;
-                const dy = containerRelativePlayerY - asteroid.y;
+                const dy = playerY - asteroid.y;
                 const distanceSq = dx * dx + dy * dy;
                 const hitRadiusSumSq = Math.pow(PLAYER_HITBOX_RADIUS + ASTEROID_HITBOX_RADIUS, 2);
 
@@ -438,9 +462,6 @@
         }
 
         window.addEventListener('load', init);
-        window.addEventListener('resize', () => {
-            gameContainerRect = gameContainer.getBoundingClientRect();
-        });
     </script>
 </body>
 </html>
