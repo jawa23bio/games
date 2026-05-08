@@ -195,11 +195,10 @@
         
         <div id="reward-screen">
             <div class="reward-title">MISSION ACCOMPLISHED</div>
-            <p class="reward-subtitle">Gauntlet survived. Select your US reward:</p>
+            <p class="reward-subtitle">Happy 21 Thalaivareee. Go ahead and choose your reward:</p>
             
-            <button class="option-btn" onclick="claimPrize(1)">1. Tanglish Letter/Poem</button>
-            <button class="option-btn" onclick="claimPrize(2)">2. US/India Music Vibe</button>
-            <button class="option-btn" onclick="claimPrize(3)">3. Physical US Item</button>
+            <button class="option-btn" onclick="claimPrize(1)">1. கவிதை</button>
+            <button class="option-btn" onclick="claimPrize(2)">2. A gift from US</button>
 
             <div id="final-message"></div>
         </div>
@@ -456,8 +455,6 @@
                 `;
             } else if (optionNumber === 2) {
                 finalMsg.innerHTML = `CODE: <span style="color:#fff;">GAUNTLET_PASSED</span><br>CHOICE: <strong>US/India Music Vibe</strong><br><br><span style="font-size: 0.9rem; color: #aaa;">Screenshot this log and transmit via WhatsApp to claim!</span>`;
-            } else if (optionNumber === 3) {
-                finalMsg.innerHTML = `CODE: <span style="color:#fff;">GAUNTLET_PASSED</span><br>CHOICE: <strong>Physical US Item</strong><br><br><span style="font-size: 0.9rem; color: #aaa;">Screenshot this log and transmit via WhatsApp to claim!</span>`;
             }
         }
 
