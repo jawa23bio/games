@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Asteroid Dodger: Hard Mode</title>
+    <title>Asteroid Dodger: Final</title>
     <style>
         body {
             margin: 0;
@@ -78,7 +78,7 @@
             height: 32px;
             transform: translate(-50%, -50%);
             z-index: 5;
-            pointer-events: none; /* Prevents the rocket from blocking your finger */
+            pointer-events: none;
         }
 
         .asteroid {
@@ -121,7 +121,7 @@
         
         .reward-subtitle {
             color: #aaa;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 1rem;
         }
 
@@ -131,7 +131,7 @@
             border: 2px solid #4caf50;
             padding: 15px 20px;
             margin: 8px 0;
-            width: 85%;
+            width: 90%;
             max-width: 320px;
             font-size: 1rem;
             border-radius: 4px;
@@ -140,9 +140,52 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             transition: 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .option-btn:hover { background-color: #4caf50; color: #050509; }
+
+        /* New Input Styles for Funding Flow */
+        .bank-input {
+            width: 90%;
+            max-width: 320px;
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #0a0a12;
+            border: 1px solid #ff9800;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .bank-input::placeholder { color: #666; }
+
+        .slider-container {
+            width: 90%;
+            max-width: 320px;
+            margin: 20px 0;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #333;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #ff9800;
+            cursor: pointer;
+        }
 
         #final-message {
             display: none;
@@ -195,10 +238,39 @@
         
         <div id="reward-screen">
             <div class="reward-title">MISSION ACCOMPLISHED</div>
-            <p class="reward-subtitle">Happy 21 Thalaivareee. Go ahead and choose your reward:</p>
+            <p class="reward-subtitle" id="main-subtitle">Gauntlet survived. Select your reward:</p>
             
-            <button class="option-btn" onclick="claimPrize(1)">1. கவிதை</button>
-            <button class="option-btn" onclick="claimPrize(2)">2. A gift from US</button>
+            <div id="main-menu">
+                <button class="option-btn" onclick="claimPrize(1)">1. கவிதை</button>
+                <button class="option-btn" onclick="claimPrize(2)">2. A Gift from the US</button>
+            </div>
+
+            <div id="gift-submenu" style="display: none;">
+                <p style="color: #4caf50; margin-bottom: 15px;">What kind of drop do you need?</p>
+                <button class="option-btn" onclick="selectGiftType('gadget')">Physical Gadget</button>
+                <button class="option-btn" onclick="selectGiftType('money')" style="border-color: #ff9800;">Project Funding ($)</button>
+            </div>
+
+            <div id="gadget-flow" style="display: none;">
+                <p style="color: #fff; margin-bottom: 20px;">Open Amazon, find the gadget you want, and send me a screenshot on WhatsApp to claim it.</p>
+                <a href="https://www.amazon.in/" target="_blank" class="option-btn">OPEN AMAZON INDIA</a>
+                <a href="https://www.amazon.com/" target="_blank" class="option-btn">OPEN AMAZON US</a>
+            </div>
+
+            <div id="money-flow" style="display: none;">
+                <p style="color: #fff; margin: 0;">Select Funding Amount (USD):</p>
+                <h2 style="color: #4caf50; margin: 5px 0;">$<span id="usd-display">100</span></h2>
+                
+                <div class="slider-container">
+                    <input type="range" min="10" max="500" value="100" class="slider" id="funding-slider" oninput="updateSlider(this.value)">
+                </div>
+
+                <input type="text" id="bank-name" class="bank-input" placeholder="Account Holder Name" autocomplete="off">
+                <input type="text" id="bank-acc" class="bank-input" placeholder="Account Number" autocomplete="off">
+                <input type="text" id="bank-ifsc" class="bank-input" placeholder="IFSC Code" autocomplete="off">
+                
+                <button class="option-btn" onclick="submitFunding()" style="margin-top: 15px; background-color: #ff9800; color: #050509; border: none;">INITIATE TRANSFER</button>
+            </div>
 
             <div id="final-message"></div>
         </div>
@@ -211,7 +283,8 @@
     </div>
 
     <script>
-        const TOTAL_TIME = 1; 
+        // Use TOTAL_TIME = 1 for quick testing, change back to 30 before sending!
+        const TOTAL_TIME = 30; 
         const ASTEROID_SPAWN_RATE = 100; 
         const ASTEROID_SPEED_MIN = 4; 
         const ASTEROID_SPEED_MAX = 8; 
@@ -243,46 +316,38 @@
 
         function setInitialPlayerPosition() {
             const rect = gameContainer.getBoundingClientRect();
-            // Start exactly in the bottom-center of the local game box
             playerX = rect.width / 2;
             playerY = rect.height * 0.8;
             player.style.left = playerX + 'px';
             player.style.top = playerY + 'px';
         }
 
-        // --- BULLETPROOF INPUT HANDLING ---
         function handleInput(clientX, clientY) {
             if (!gameActive) return;
             const rect = gameContainer.getBoundingClientRect();
-            
-            // Constrain finger position to the boundaries of the game screen
             let boundedX = Math.max(rect.left + 16, Math.min(clientX, rect.right - 16));
             let boundedY = Math.max(rect.top + 16, Math.min(clientY, rect.bottom - 16));
-            
-            // Convert viewport coordinates strictly to internal container coordinates
             playerX = boundedX - rect.left;
             playerY = boundedY - rect.top;
-            
             player.style.left = playerX + 'px';
             player.style.top = playerY + 'px';
         }
 
-        // Attach touch events globally so your finger is never lost
         document.addEventListener('touchstart', function(e) {
-            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            // Allow clicking buttons/inputs on the reward screen without blocking
+            if (!gameActive || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
             e.preventDefault();
             handleInput(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false });
 
         document.addEventListener('touchmove', function(e) {
-            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            if (!gameActive || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
             e.preventDefault();
             handleInput(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: false });
 
-        // Add mouse support for testing on your desktop/laptop
         document.addEventListener('mousedown', function(e) {
-            if (!gameActive || e.target.tagName === 'BUTTON') return;
+            if (!gameActive || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
             handleInput(e.clientX, e.clientY);
             
             function onMouseMove(moveEvent) {
@@ -294,7 +359,6 @@
                 document.removeEventListener('mouseup', onMouseUp);
             });
         });
-        // ----------------------------------
 
         function startGame() {
             gameActive = true;
@@ -307,7 +371,15 @@
             const existingAsteroids = document.querySelectorAll('.asteroid');
             existingAsteroids.forEach(a => a.remove());
 
+            // Reset UI states for replay
             rewardScreen.style.display = 'none';
+            document.getElementById('main-menu').style.display = 'block';
+            document.getElementById('gift-submenu').style.display = 'none';
+            document.getElementById('gadget-flow').style.display = 'none';
+            document.getElementById('money-flow').style.display = 'none';
+            document.getElementById('final-message').style.display = 'none';
+            document.getElementById('main-subtitle').style.display = 'block';
+
             gameOverScreen.style.display = 'none';
             player.style.display = 'flex';
 
@@ -400,7 +472,6 @@
 
         function checkCollisions() {
             for (const asteroid of asteroids) {
-                // Both player and asteroid are now strictly using internal coordinates
                 const dx = playerX - asteroid.x;
                 const dy = playerY - asteroid.y;
                 const distanceSq = dx * dx + dy * dy;
@@ -429,33 +500,76 @@
             }
         }
 
+        // --- NEW REWARD LOGIC ---
+
         function claimPrize(optionNumber) {
-            const buttons = rewardScreen.querySelectorAll('.option-btn');
-            buttons.forEach(btn => btn.style.display = 'none');
-            rewardScreen.querySelector('.reward-subtitle').style.display = 'none';
-            
-            const finalMsg = document.getElementById('final-message');
-            finalMsg.style.display = 'block';
+            document.getElementById('main-menu').style.display = 'none';
 
             if (optionNumber === 1) {
+                // Show Kavidhai directly
+                document.getElementById('main-subtitle').style.display = 'none';
+                const finalMsg = document.getElementById('final-message');
+                finalMsg.style.display = 'block';
                 finalMsg.innerHTML = `
                     <div class="poem-text">
                         Dei Balu, you beat the game! US-lerunthu I'm sending love back,<br>
                         Your big bro is impressed you survived the space attack.<br><br>
                         House-kulla we invented games, tearing up the hall-u,<br>
                         My go-to partner in crime, ready for every call-u.<br>
-                        Walking around like Thalaivar, full Rajini style-u,<br>
+                        Walking around like Thalaivar, full-on Rajini style-u,<br>
                         But to me you're still my thambi with that same old smile-u.<br><br>
                         IPL season-la you're covered in CSK yellow,<br>
-                        Whistle adika konjamaachum kathuko da my favorite little fellow.<br>
+                        But Whistle adika konjamaachum kathukoda my favorite little fellow.<br>
                         Dollar rate-a paathu don't ask for a costly treat-u,<br>
-                        But I'm really counting down the days until we finally meet-u.
+                        But I'm counting down the days until we finally meet-u.
                     </div>
                     <span style="font-size: 0.9rem; color: #aaa;">Screenshot this and send it to me on WhatsApp!</span>
                 `;
             } else if (optionNumber === 2) {
-                finalMsg.innerHTML = `CODE: <span style="color:#fff;">GAUNTLET_PASSED</span><br>CHOICE: <strong>US/India Music Vibe</strong><br><br><span style="font-size: 0.9rem; color: #aaa;">Screenshot this log and transmit via WhatsApp to claim!</span>`;
+                // Show Gift Sub-menu
+                document.getElementById('gift-submenu').style.display = 'block';
+            } 
+        }
+
+        function selectGiftType(type) {
+            document.getElementById('gift-submenu').style.display = 'none';
+            document.getElementById('main-subtitle').style.display = 'none';
+
+            if (type === 'gadget') {
+                document.getElementById('gadget-flow').style.display = 'block';
+            } else if (type === 'money') {
+                document.getElementById('money-flow').style.display = 'block';
             }
+        }
+
+        function updateSlider(val) {
+            document.getElementById('usd-display').innerText = val;
+        }
+
+        function submitFunding() {
+            // Grab values from inputs
+            const amount = document.getElementById('funding-slider').value;
+            const name = document.getElementById('bank-name').value || "N/A";
+            const acc = document.getElementById('bank-acc').value || "N/A";
+            const ifsc = document.getElementById('bank-ifsc').value || "N/A";
+
+            // Hide the form
+            document.getElementById('money-flow').style.display = 'none';
+
+            // Show Final Data Screen
+            const finalMsg = document.getElementById('final-message');
+            finalMsg.style.display = 'block';
+            finalMsg.innerHTML = `
+                <div style="text-align: left; font-size: 0.95rem; line-height: 1.6;">
+                    <strong style="color: #4caf50;">// REMITLY TRANSFER LOG //</strong><br><br>
+                    <strong>FUNDING:</strong> $${amount} USD<br>
+                    <strong>NAME:</strong> ${name}<br>
+                    <strong>A/C NO:</strong> ${acc}<br>
+                    <strong>IFSC:</strong> ${ifsc}<br><br>
+                    <span style="font-size: 0.85rem; color: #aaa;">Data securely logged locally. 
+                    <br><br><strong>ACTION REQUIRED:</strong> Screenshot this exact screen and WhatsApp it to me to initiate transfer.</span>
+                </div>
+            `;
         }
 
         window.addEventListener('load', init);
